@@ -636,17 +636,19 @@ export class StartingRoom {
         // Add pulsing glow effect to door
         const pulseIntensity = 0.7 + Math.sin(Date.now() / 300) * 0.3;
         
-        // Draw door glow
-        const doorGradient = ctx.createRadialGradient(
-            viewPosition.x + door.x, viewPosition.y + door.y, 0,
-            viewPosition.x + door.x, viewPosition.y + door.y, door.height * 1.5
-        );
-        doorGradient.addColorStop(0, `rgba(51, 255, 119, ${0.5 * pulseIntensity})`);
-        doorGradient.addColorStop(1, 'rgba(51, 255, 119, 0)');
-        ctx.fillStyle = doorGradient;
-        ctx.beginPath();
-        ctx.ellipse(viewPosition.x + door.x, viewPosition.y + door.y, door.height * 1.5, door.height * 1.5, 0, 0, Math.PI * 2);
-        ctx.fill();
+        // Draw door glow - ensure coordinates are finite numbers
+        if (isFinite(viewPosition.x) && isFinite(viewPosition.y) && isFinite(door.x) && isFinite(door.y)) {
+            const doorGradient = ctx.createRadialGradient(
+                viewPosition.x + door.x, viewPosition.y + door.y, 0,
+                viewPosition.x + door.x, viewPosition.y + door.y, door.height * 1.5
+            );
+            doorGradient.addColorStop(0, `rgba(51, 255, 119, ${0.5 * pulseIntensity})`);
+            doorGradient.addColorStop(1, 'rgba(51, 255, 119, 0)');
+            ctx.fillStyle = doorGradient;
+            ctx.beginPath();
+            ctx.ellipse(viewPosition.x + door.x, viewPosition.y + door.y, door.height * 1.5, door.height * 1.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
         
         // Draw title and instructions
         this.renderText(ctx, viewPosition);

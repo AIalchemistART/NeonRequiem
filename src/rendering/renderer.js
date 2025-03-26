@@ -40,6 +40,11 @@ export default class Renderer {
         this.ctx.restore();
     }
     
+    // Set global alpha (transparency)
+    setGlobalAlpha(alpha) {
+        this.ctx.globalAlpha = alpha;
+    }
+    
     drawRect(x, y, width, height, color) {
         this.ctx.fillStyle = color;
         this.ctx.fillRect(x, y, width, height);
@@ -50,6 +55,20 @@ export default class Renderer {
         this.ctx.beginPath();
         this.ctx.arc(x, y, radius, 0, Math.PI * 2);
         this.ctx.fill();
+    }
+    
+    // Alias for drawCircle to maintain compatibility
+    fillCircle(x, y, radius, color) {
+        this.drawCircle(x, y, radius, color);
+    }
+    
+    // Draw circle outline
+    strokeCircle(x, y, radius, color, lineWidth = 1) {
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = lineWidth;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+        this.ctx.stroke();
     }
     
     drawText(text, x, y, color, fontSize = '16px', font = 'Arial') {

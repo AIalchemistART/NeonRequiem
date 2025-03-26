@@ -92,6 +92,9 @@ export default class Game {
         // Initialize the camera
         this.camera = new Camera(width, height, this.currentRoom.width, this.currentRoom.height);
         
+        // Set the camera target to the player
+        this.camera.target = this.player;
+        
         // Set the camera in the renderer
         this.renderer.setCamera(this.camera);
         
@@ -126,6 +129,9 @@ export default class Game {
         
         // Track game start time for dynamic difficulty scaling
         this.gameStartTime = Date.now();
+        
+        // Private property to track animation frame ID
+        this._animFrameId = null;
     }
     
     /**
@@ -196,6 +202,7 @@ export default class Game {
     start() {
         if (!this.running) {
             this.running = true;
+            this.lastTimestamp = performance.now();
             // Start the game loop
             requestAnimationFrame(this.gameLoop);
         }
@@ -236,10 +243,7 @@ export default class Game {
         
         // Continue the game loop if still running
         if (this.running) {
-            requestAnimationFrame(this.gameLoop);
-        } else {
-            // If not running but we're here, it means we just need the next frame
-            requestAnimationFrame(this.gameLoop.bind(this));
+            this._animFrameId = requestAnimationFrame(this.gameLoop);
         }
     }
     
@@ -879,13 +883,13 @@ export default class Game {
         );
         
         // Display player health
-        const healthPercent = this.player.health / this.player.maxHealth;
+        const healthPercent = Math.min(1, this.player.health / this.player.maxHealth);
         const healthColor = this.accessibilitySettings.highContrast 
             ? (healthPercent > 0.3 ? '#FFFFFF' : '#FFFF00') // Simplified high contrast colors
             : this.getHealthColor(healthPercent);
             
         this.renderer.drawScreenText(
-            `Health: ${this.player.health}%`, 
+            `Health: ${Math.floor(this.player.health)}`, 
             padding + leftUIOffsetX, 
             padding * 6 + leftUIOffsetY - 5, // Move health percentage up by 5 units
             healthColor, 
@@ -911,14 +915,6 @@ export default class Game {
         // Health bar with animated fill
         const healthWidth = barWidth * healthPercent;
         
-        // Calculate pulse effect when health is full
-        let pulseEffect = 0;
-        if (healthPercent >= 1) {
-            // Create a pulsing effect using sine wave based on current timestamp
-            // Reduce or eliminate pulse effect in high contrast mode
-            pulseEffect = this.accessibilitySettings.highContrast ? 0 : 0.2 * Math.sin(Date.now() / 200);
-        }
-        
         // Draw with gradient overlay for more visual appeal
         const healthGradient = this.renderer.ctx.createLinearGradient(barX, barY, barX + healthWidth, barY);
         
@@ -930,8 +926,8 @@ export default class Game {
                 healthGradient.addColorStop(1, '#00FF00');
             } else {
                 const baseColor = healthColor;
-                const pulseColor = this.adjustBrightness(healthColor, 1.3 + pulseEffect);
-                const glowColor = this.adjustBrightness(healthColor, 1.5 + pulseEffect);
+                const pulseColor = this.adjustBrightness(healthColor, 1.3);
+                const glowColor = this.adjustBrightness(healthColor, 1.5);
                 
                 healthGradient.addColorStop(0, baseColor);
                 healthGradient.addColorStop(0.7, pulseColor);
@@ -939,7 +935,7 @@ export default class Game {
                 
                 // Add glow effect around the health bar when full
                 this.renderer.ctx.shadowColor = healthColor;
-                this.renderer.ctx.shadowBlur = 5 + 3 * Math.abs(pulseEffect);
+                this.renderer.ctx.shadowBlur = 5;
             }
         } else {
             if (this.accessibilitySettings.highContrast) {
@@ -1738,7 +1734,7 @@ export default class Game {
         // Update camera immediately
         this.camera.jumpTo(this.player.x, this.player.y);
         setTimeout(() => {
-            this.camera.zoomTo(1.0); // Return to normal zoom
+            this.camera.zoomTo(1.0, 800); // Return to normal zoom with duration
         }, 300);
         
         // Start playing a random background track
@@ -1747,6 +1743,97 @@ export default class Game {
         console.log("Transitioned to main game successfully");
     }
 
+    /**
+     * Restart the game after player death - complete reinitialization
+     */
+    restartGame() {
+        console.log("Completely restarting game from scratch...");
+        
+        // Stop the current game loop
+        this.running = false;
+        cancelAnimationFrame(this._animFrameId);
+        
+        // Reset core game properties similar to the constructor
+        this.score = 0;
+        this.waveCounter = 0;
+        this.lastTimestamp = performance.now();
+        this.gameStartTime = Date.now();
+        
+        // Initialize the effects manager first
+        this.effects = new EffectsManager(300); // Allow up to 300 particles
+        
+        // Create the player in the center of the screen
+        this.player = new Player(this.width / 2, this.height / 2);
+        this.player.effects = this.effects;
+        
+        // Important: pass 'this' to StartingRoom constructor instead of dimensions
+        this.currentRoom = new StartingRoom(this);
+        
+        // Reset camera completely
+        this.camera.reset();
+        this.camera.target = this.player;
+        
+        // Reset UI elements
+        this.selectedMenuItem = 0;
+        this.menuOpen = false;
+        
+        // Create player reconstitution effect before camera animation
+        this.createPlayerReconstitutionEffect();
+        
+        // Fade in music
+        if (window.audioManager) {
+            window.audioManager.fadeInBackgroundMusic(2000);
+        }
+        
+        // Enhanced camera animation sequence for restart
+        // Start with zoom out and shake
+        this.camera.shake(25, 400); // Increased intensity and duration
+        this.camera.zoomTo(0.7, 300);
+        
+        // After initial shake, do a smooth zoom transition sequence
+        setTimeout(() => {
+            this.camera.shake(15, 250); // Additional shake during zoom in
+            this.camera.zoomTo(1.2, 400); // Overshoot zoom in
+            
+            setTimeout(() => {
+                this.camera.shake(10, 200); // More shake during pullback
+                this.camera.zoomTo(0.9, 250); // Quick pull back
+                
+                setTimeout(() => {
+                    this.camera.shake(5, 150); // Subtle shake during final settle
+                    this.camera.zoomTo(1.0, 350); // Settle to normal
+                    
+                    // Add a subtle final shake for emphasis
+                    setTimeout(() => {
+                        this.camera.shake(8, 300);
+                    }, 350);
+                    
+                }, 250);
+            }, 400);
+        }, 300);
+        
+        // Reset input state (don't use resetState as it doesn't exist)
+        if (this.inputHandler) {
+            // Clear any pressed keys
+            this.inputHandler.keys = {};
+            this.inputHandler.mousePosition = { x: 0, y: 0 };
+            this.inputHandler.mouseDown = false;
+        }
+        
+        // Reset all collections
+        this.projectiles = [];
+        this.particles = [];
+        this.powerUps = [];
+        
+        // Set game state back to 'playing'
+        this.gameState = 'playing';
+        
+        // Restart the game loop
+        this.running = true;
+        this.lastTimestamp = performance.now();
+        this._animFrameId = requestAnimationFrame(this.gameLoop);
+    }
+    
     /**
      * Handle special keyboard inputs for the game
      */
@@ -2054,36 +2141,63 @@ export default class Game {
     }
     
     /**
-     * Restart the game after player death
+     * Creates a dramatic particle effect when the player is reconstituted
      */
-    restartGame() {
-        console.log("Restarting game...");
+    createPlayerReconstitutionEffect() {
+        if (!this.effects || !this.player) return;
         
-        // Create a new player at the starting position
-        this.player = new Player(this.width / 2, this.height / 2);
+        const playerX = this.player.x;
+        const playerY = this.player.y;
         
-        // Reset to starting room
-        this.currentRoom = new StartingRoom(this.width, this.height, this.wallThickness);
+        // Inner burst - fast expanding bright particles
+        this.effects.particleSystem.createParticleBurst(playerX, playerY, 40, {
+            color: ['#ffffff', '#00ffff', '#88ffff', '#ff00ff'],
+            minSpeed: 40,
+            maxSpeed: 120,
+            minSize: 3,
+            maxSize: 6,
+            minLifetime: 0.4, 
+            maxLifetime: 0.8
+        });
         
-        // Reset camera
-        this.camera.reset();
-        this.camera.setTarget(this.player);
+        // Outer burst - slower expanding particles
+        this.effects.particleSystem.createParticleBurst(playerX, playerY, 30, {
+            color: ['#00ffcc', '#ff00aa', '#ffff00', '#00ccff'],
+            minSpeed: 20,
+            maxSpeed: 60,
+            minSize: 4,
+            maxSize: 8,
+            minLifetime: 0.8,
+            maxLifetime: 1.2
+        });
         
-        // Create effects manager for the new room
-        this.effects = new EffectsManager();
-        
-        // Camera effect for game restart
-        this.camera.zoomTo(0.8, 500); // Zoom out
-        setTimeout(() => {
-            this.camera.zoomTo(1, 800); // Zoom back in
-        }, 600);
-        
-        // Reset wave counter if it exists
-        if (this.waveCounter !== undefined) {
-            this.waveCounter = 0;
+        // Create a series of expanding rings
+        for (let i = 0; i < 3; i++) {
+            setTimeout(() => {
+                this.effects.createScreenFlash('#00ffff', 0.2, 0.15);
+                
+                // Create circular wave of particles
+                const segments = 16;
+                const radius = 10 + (i * 15);
+                
+                for (let j = 0; j < segments; j++) {
+                    const angle = (j / segments) * Math.PI * 2;
+                    const x = playerX + Math.cos(angle) * radius;
+                    const y = playerY + Math.sin(angle) * radius;
+                    
+                    this.effects.particleSystem.createParticle(
+                        x, y, 
+                        Math.cos(angle) * 30,
+                        Math.sin(angle) * 30,
+                        4,
+                        i === 0 ? '#ffffff' : (i === 1 ? '#00ffff' : '#ff00ff'),
+                        0.5
+                    );
+                }
+            }, i * 100);
         }
         
-        // Continue game loop
-        requestAnimationFrame(this.gameLoop.bind(this));
+        // Create a central glow effect
+        this.effects.createGlowEffect(playerX, playerY, 20, '#ffffff', 0.6);
     }
 }

@@ -741,7 +741,7 @@ export default class AudioManager {
                                 z-index: 1000;
                                 cursor: pointer;
                             `;
-                            audioNotification.innerHTML = 'Click anywhere to enable music 🎵';
+                            audioNotification.innerHTML = 'Click anywhere to enable music ';
                             document.body.appendChild(audioNotification);
                             
                             // User interaction is required for audio playback
@@ -875,5 +875,110 @@ export default class AudioManager {
      */
     setAutoChangeEnabled(enabled) {
         this.autoChangeEnabled = enabled;
+    }
+    
+    /**
+     * Fade out background music over the specified duration
+     * @param {number} duration - Fade duration in milliseconds
+     */
+    fadeOutBackgroundMusic(duration = 2000) {
+        if (!this.initialized || !this.backgroundMusic) return;
+        
+        try {
+            const currentTime = this.context.currentTime;
+            this.backgroundGain.gain.setValueAtTime(this.backgroundGain.gain.value, currentTime);
+            this.backgroundGain.gain.linearRampToValueAtTime(0, currentTime + (duration / 1000));
+            
+            // Stop the music after fade out
+            setTimeout(() => {
+                if (this.backgroundMusic) {
+                    this.backgroundMusic.pause();
+                }
+            }, duration);
+            
+            console.log("AudioManager: Fading out background music");
+        } catch(e) {
+            console.warn("AudioManager: Error while fading out background music", e);
+        }
+    }
+    
+    /**
+     * Fade in background music over the specified duration
+     * @param {number} duration - Fade duration in milliseconds
+     */
+    fadeInBackgroundMusic(duration = 2000) {
+        if (!this.initialized || !this.backgroundMusic) return;
+        
+        try {
+            // Ensure the music is playing
+            if (this.backgroundMusic.paused) {
+                this.backgroundMusic.play().catch(e => {
+                    console.warn("AudioManager: Error playing background music during fade in", e);
+                });
+            }
+            
+            const currentTime = this.context.currentTime;
+            // Set initial volume to 0
+            this.backgroundGain.gain.setValueAtTime(0, currentTime);
+            // Ramp up to normal volume
+            this.backgroundGain.gain.linearRampToValueAtTime(0.8, currentTime + (duration / 1000));
+            
+            console.log("AudioManager: Fading in background music");
+        } catch(e) {
+            console.warn("AudioManager: Error while fading in background music", e);
+        }
+    }
+
+    /**
+     * Play a dramatic death sound effect
+     */
+    playDeathSound() {
+        if (!this.initialized) return;
+        
+        try {
+            // Create multiple oscillators for a rich death sound
+            const baseOsc = this.context.createOscillator();
+            const highOsc = this.context.createOscillator();
+            
+            // Create gain nodes for envelope
+            const baseGain = this.context.createGain();
+            const highGain = this.context.createGain();
+            
+            // Connect oscillators to gains
+            baseOsc.connect(baseGain);
+            highOsc.connect(highGain);
+            
+            // Connect gains to master
+            baseGain.connect(this.masterGain);
+            highGain.connect(this.masterGain);
+            
+            // Configure oscillators
+            baseOsc.type = 'sine';
+            baseOsc.frequency.setValueAtTime(110, this.context.currentTime); // Low A
+            baseOsc.frequency.exponentialRampToValueAtTime(55, this.context.currentTime + 1.5); // Drop an octave
+            
+            highOsc.type = 'sawtooth';
+            highOsc.frequency.setValueAtTime(440, this.context.currentTime); // A4
+            highOsc.frequency.exponentialRampToValueAtTime(110, this.context.currentTime + 0.8); // Dramatic fall
+            
+            // Configure gain envelopes
+            baseGain.gain.setValueAtTime(0, this.context.currentTime);
+            baseGain.gain.linearRampToValueAtTime(0.3, this.context.currentTime + 0.1);
+            baseGain.gain.exponentialRampToValueAtTime(0.001, this.context.currentTime + 1.5);
+            
+            highGain.gain.setValueAtTime(0, this.context.currentTime);
+            highGain.gain.linearRampToValueAtTime(0.15, this.context.currentTime + 0.05);
+            highGain.gain.exponentialRampToValueAtTime(0.001, this.context.currentTime + 0.8);
+            
+            // Start and stop oscillators
+            baseOsc.start();
+            highOsc.start();
+            baseOsc.stop(this.context.currentTime + 1.5);
+            highOsc.stop(this.context.currentTime + 0.8);
+            
+            console.log("AudioManager: Playing death sound");
+        } catch(e) {
+            console.warn("AudioManager: Error playing death sound", e);
+        }
     }
 }

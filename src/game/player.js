@@ -69,8 +69,8 @@ export default class Player {
         this.trailDotRemovalIndex = 0; // Index to keep track of which tone to play
         
         // Player stats
-        this.health = 250; // Increased from 100 for more generous health pool
-        this.maxHealth = 250; // Increased to match
+        this.health = 100; // Set to exactly 100 for visual clarity
+        this.maxHealth = 100; // Set to exactly 100 for visual clarity
         this.isDead = false; // New flag to track if player is dead
         this.deathAnimationTimer = 0; // Timer for death animation
         this.deathAnimationDuration = 2000; // 2 seconds for death animation
@@ -518,6 +518,12 @@ export default class Player {
         this.deathAnimationTimer = this.deathAnimationDuration;
         
         console.log("Player died");
+        
+        // Fade out music if available
+        if (window.audioManager) {
+            window.audioManager.fadeOutBackgroundMusic(1500);
+            window.audioManager.playDeathSound();
+        }
         
         // Create death particles
         if (this.effects) {

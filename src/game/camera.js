@@ -31,6 +31,9 @@ export class Camera {
         this.fps = 0;
         this.fpsUpdateInterval = 500; // Update FPS every 500ms
         this.fpsTimer = 0;
+        
+        // Target for camera to follow
+        this.target = null;
     }
     
     // Update room dimensions when transitioning to a new room
@@ -130,6 +133,47 @@ export class Camera {
         this.shakeIntensity = intensity;
         this.shakeDuration = duration;
         this.shakeTimer = 0;
+    }
+    
+    /**
+     * Reset camera to default state
+     */
+    reset() {
+        this.x = 0;
+        this.y = 0;
+        this.targetX = 0;
+        this.targetY = 0;
+        this.zoomLevel = 1.0;
+        this.targetZoom = 1.0;
+        this.shakeIntensity = 0;
+        this.shakeDuration = 0;
+        this.shakeTimer = 0;
+        // Don't reset target as it will be set separately
+    }
+    
+    /**
+     * Set target for camera to follow
+     * @param {Object} target - Object with x and y properties
+     */
+    setTarget(target) {
+        this.target = target;
+    }
+    
+    /**
+     * Main update method - called each frame to update camera state
+     * @param {number} deltaTime - Time since last frame in milliseconds
+     */
+    update(deltaTime) {
+        // Update target tracking if we have one
+        if (this.target) {
+            this.follow(this.target.x, this.target.y, deltaTime);
+        }
+        
+        // Update screen shake
+        this.updateShake(deltaTime);
+        
+        // Update zoom level
+        this.updateZoom(deltaTime);
     }
     
     // Update screen shake effect
