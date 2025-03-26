@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Requiem</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+    <!-- Add seedrandom library for procedural generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+            color: #0ff;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+        
+        #gameCanvas {
+            border: 2px solid #0ff;
+            box-shadow: 0 0 20px #0ff;
+        }
+        
+        #instructions {
+            margin-top: 20px;
+            max-width: 800px;
+            text-align: center;
+            padding: 10px;
+            border: 1px solid #0ff;
+            background-color: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 10px #0ff;
+        }
+        
+        .key {
+            display: inline-block;
+            padding: 2px 8px;
+            margin: 0 2px;
+            background-color: #222;
+            border: 1px solid #0ff;
+            border-radius: 4px;
+            box-shadow: 0 0 5px #0ff;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .neon-text {
+            text-shadow: 0 0 5px #0ff, 0 0 10px #0ff;
+        }
+        
+        #notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 1px solid #0ff;
+            border-radius: 5px;
+            color: #0ff;
+            font-size: 16px;
+            z-index: 1000;
+            box-shadow: 0 0 15px #0ff;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        #notification.active {
+            opacity: 1;
+        }
+        
+        .pointerLock #gameCanvas {
+            cursor: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="notification" class="neon-text">Click on the game to enable pointer lock</div>
+    
+    <canvas id="gameCanvas"></canvas>
+    
+    <script type="module" src="src/main.js"></script>
+    <script>
+        // Show initial notification
+        const notification = document.getElementById('notification');
+        notification.classList.add('active');
+        setTimeout(() => {
+            notification.classList.remove('active');
+        }, 5000);
+        
+        // Helper function to show notifications
+        window.showNotification = function(message, duration = 3000) {
+            notification.textContent = message;
+            notification.classList.add('active');
+            setTimeout(() => {
+                notification.classList.remove('active');
+            }, duration);
+        };
+        
+        // Listen for pointer lock changes
+        document.addEventListener('pointerlockchange', handlePointerLockChange);
+        document.addEventListener('mozpointerlockchange', handlePointerLockChange);
+        document.addEventListener('webkitpointerlockchange', handlePointerLockChange);
+        
+        function handlePointerLockChange() {
+            const pointerLockElement = 
+                document.pointerLockElement || 
+                document.mozPointerLockElement || 
+                document.webkitPointerLockElement;
+            
+            if (pointerLockElement === document.getElementById('gameCanvas')) {
+                document.body.classList.add('pointerLock');
+                showNotification('Pointer locked - Left click to shoot, Right click to dash');
+            } else {
+                document.body.classList.remove('pointerLock');
+                showNotification('Pointer unlocked - Click game to re-enable');
+            }
+        }
+    </script>
+</body>
+</html>
