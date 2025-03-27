@@ -199,6 +199,15 @@ export function createVibePortal(type, x, y, options = {}) {
                 ...options
             });
             
+        case 'vibejam': // Blue Vibe Jam portal with different animation pattern
+            return new VibePortal(x, y, options.size || 45, '#00a2ff', {
+                label: 'VIBE JAM 2025',
+                particleCount: 120,
+                rotationSpeed: 0.7,
+                pulseSpeed: 1.5,
+                ...options
+            });
+            
         default: // Default purple portal
             return new VibePortal(x, y, options.size || 40, '#ff00ff', options);
     }

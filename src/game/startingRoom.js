@@ -63,10 +63,21 @@ export class StartingRoom {
         // Always create exit portal to Vibeverse
         this.exitPortal = createVibePortal('exit',
             this.wallThickness + 80, // Left side of room, moved 20 units to the right
-            this.height / 2 + 150, // Lower middle of room height
+            this.height - this.wallThickness - 80, // Lowered to match Vibe Jam portal height
             {
                 destinationUrl: 'https://portal.pieter.com',
                 label: 'VIBEVERSE PORTAL'
+                // showInteractionHint is true by default
+            }
+        );
+        
+        // Create Vibe Jam 2025 portal in the lower right corner
+        this.vibeJamPortal = createVibePortal('vibejam',
+            this.width - this.wallThickness - 80, // Right side of room, moved 80 units to the left
+            this.height - this.wallThickness - 80, // Bottom of room, moved 80 units up
+            {
+                destinationUrl: 'https://jam.pieter.com',
+                label: 'VIBE JAM 2025'
                 // showInteractionHint is true by default
             }
         );
@@ -115,6 +126,15 @@ export class StartingRoom {
             
             // Check if player is near the portal
             this.exitPortal.checkCollision(player);
+            // Portal activation moved to handleKeyDown
+        }
+        
+        // Update Vibe Jam 2025 portal
+        if (this.vibeJamPortal) {
+            this.vibeJamPortal.update(deltaTime);
+            
+            // Check if player is near the portal
+            this.vibeJamPortal.checkCollision(player);
             // Portal activation moved to handleKeyDown
         }
         
@@ -664,6 +684,10 @@ export class StartingRoom {
         if (this.exitPortal) {
             this.exitPortal.render(ctx);
         }
+        
+        if (this.vibeJamPortal) {
+            this.vibeJamPortal.render(ctx);
+        }
     }
     
     /**
@@ -830,6 +854,13 @@ export class StartingRoom {
             if (this.exitPortal && this.exitPortal.interactable) {
                 console.log('Activating exit portal to Vibeverse');
                 this.exitPortal.activate();
+                return;
+            }
+            
+            // Check if player is near the Vibe Jam portal and activate it
+            if (this.vibeJamPortal && this.vibeJamPortal.interactable) {
+                console.log('Activating Vibe Jam 2025 portal');
+                this.vibeJamPortal.activate();
                 return;
             }
         }
