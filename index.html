@@ -80,15 +80,447 @@
         .pointerLock #gameCanvas {
             cursor: none !important;
         }
+        
+        /* Audio Enabler Styles */
+        #audioEnablerContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            flex-direction: column;
+        }
+        
+        #audioEnabler {
+            position: relative;
+            width: 400px;
+            margin: 20px;
+            padding: 20px;
+            background-color: rgba(0, 10, 20, 0.8);
+            border: 2px solid #0ff;
+            border-radius: 10px;
+            color: #0ff;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            box-shadow: 0 0 20px #0ff;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 200;
+        }
+        
+        #audioEnabler:hover {
+            background-color: rgba(0, 20, 40, 0.9);
+            box-shadow: 0 0 30px #0ff, 0 0 50px #0af;
+            transform: scale(1.02);
+        }
+        
+        #audioEnabler:active {
+            transform: scale(0.98);
+        }
+        
+        #audioEnabler h2 {
+            margin: 0 0 15px 0;
+            font-size: 24px;
+            text-shadow: 0 0 10px #0ff, 0 0 15px #0ff;
+            letter-spacing: 2px;
+        }
+        
+        #audioEnabler .scanner-line {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 2px;
+            width: 100%;
+            background: linear-gradient(to right, transparent, #0ff, #f0f, transparent);
+            animation: scan 2s linear infinite;
+            opacity: 0.8;
+        }
+        
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        
+        #particleCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        .status-text {
+            display: block;
+            color: #0fa;
+            margin-top: 15px;
+            font-style: italic;
+        }
+        
+        .blink {
+            animation: blink 1.5s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
+        }
     </style>
 </head>
 <body>
     <div id="notification" class="neon-text">Click on the game to enable pointer lock</div>
     
+    <!-- Audio Enabler with Particle Effects -->
+    <div id="audioEnablerContainer">
+        <canvas id="particleCanvas"></canvas>
+        <div id="audioEnabler">
+            <div class="scanner-line"></div>
+            <h2>NEON REQUIEM</h2>
+            <p>[ SYSTEM INITIALIZATION REQUIRED ]</p>
+            <p>Click to <span class="neon-text">BEGIN MATERIALIZATION PROTOCOL</span></p>
+            <span class="status-text blink">// AWAITING USER AUTHORIZATION //</span>
+        </div>
+    </div>
+    
     <canvas id="gameCanvas"></canvas>
     
     <script type="module" src="src/main.js"></script>
     <script>
+        // Initialize particle system
+        const particleCanvas = document.getElementById('particleCanvas');
+        const ctx = particleCanvas.getContext('2d');
+        
+        // Set canvas size to match window
+        function resizeParticleCanvas() {
+            particleCanvas.width = window.innerWidth;
+            particleCanvas.height = window.innerHeight;
+        }
+        
+        // Listen for window resize
+        window.addEventListener('resize', resizeParticleCanvas);
+        resizeParticleCanvas();
+        
+        // Particle system
+        class Particle {
+            constructor(x, y, speedX, speedY, size, color, lifespan = 1) {
+                this.x = x;
+                this.y = y;
+                this.originalSize = size;
+                this.size = size;
+                this.color = color;
+                this.speedX = speedX;
+                this.speedY = speedY;
+                this.life = 1; // Life starts at 100%
+                this.lifeReduction = 1 / (60 * lifespan); // Lifespan in seconds
+            }
+            
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life -= this.lifeReduction;
+                this.size = this.originalSize * this.life;
+                
+                // Add some drift and turbulence
+                this.speedX += (Math.random() - 0.5) * 0.1;
+                this.speedY += (Math.random() - 0.5) * 0.1;
+                
+                return this.life > 0;
+            }
+            
+            draw(ctx) {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+        
+        // Particle system manager
+        class ParticleSystem {
+            constructor() {
+                this.particles = [];
+                this.colors = ['#0ff', '#0af', '#08f', '#f0f', '#fff'];
+                this.lastEmit = 0;
+                this.emitRate = 100; // ms between emission bursts
+                this.running = false;
+            }
+            
+            emit(x, y, count = 1) {
+                const now = Date.now();
+                if (now - this.lastEmit < this.emitRate) return;
+                
+                this.lastEmit = now;
+                
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 0.5 + Math.random() * 2;
+                    const size = 1 + Math.random() * 3;
+                    const color = this.colors[Math.floor(Math.random() * this.colors.length)];
+                    
+                    this.particles.push(new Particle(
+                        x,
+                        y,
+                        Math.cos(angle) * speed,
+                        Math.sin(angle) * speed,
+                        size,
+                        color,
+                        1 + Math.random() * 2
+                    ));
+                }
+            }
+            
+            createExplosion(x, y, particleCount, options = {}) {
+                const {
+                    minSpeed = 1,
+                    maxSpeed = 3,
+                    minSize = 2,
+                    maxSize = 5,
+                    colors = this.colors,
+                    minLifetime = 0.5,
+                    maxLifetime = 2
+                } = options;
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = minSpeed + Math.random() * (maxSpeed - minSpeed);
+                    const size = minSize + Math.random() * (maxSize - minSize);
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    const lifetime = minLifetime + Math.random() * (maxLifetime - minLifetime);
+                    
+                    this.particles.push(new Particle(
+                        x,
+                        y,
+                        Math.cos(angle) * speed,
+                        Math.sin(angle) * speed,
+                        size,
+                        color,
+                        lifetime
+                    ));
+                }
+            }
+            
+            update() {
+                this.particles = this.particles.filter(particle => particle.update());
+            }
+            
+            draw(ctx) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                this.particles.forEach(particle => particle.draw(ctx));
+            }
+            
+            start() {
+                if (this.running) return;
+                this.running = true;
+                this.animate();
+            }
+            
+            stop() {
+                this.running = false;
+            }
+            
+            animate() {
+                if (!this.running) return;
+                
+                this.update();
+                this.draw(ctx);
+                
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+        
+        // Create particle system
+        const particleSystem = new ParticleSystem();
+        particleSystem.start();
+        
+        // Add particles around the button
+        function emitButtonParticles() {
+            if (!particleSystem.running) return;
+            
+            const button = document.getElementById('audioEnabler');
+            const rect = button.getBoundingClientRect();
+            
+            // Emit from different edges
+            const positions = [
+                // Top edge
+                { x: rect.left + Math.random() * rect.width, y: rect.top },
+                // Bottom edge
+                { x: rect.left + Math.random() * rect.width, y: rect.bottom },
+                // Left edge
+                { x: rect.left, y: rect.top + Math.random() * rect.height },
+                // Right edge
+                { x: rect.right, y: rect.top + Math.random() * rect.height }
+            ];
+            
+            const pos = positions[Math.floor(Math.random() * positions.length)];
+            particleSystem.emit(pos.x, pos.y, 2);
+        }
+        
+        // Periodically emit particles
+        setInterval(emitButtonParticles, 100);
+        
+        // Handle audio enabler clicks
+        const audioEnabler = document.getElementById('audioEnabler');
+        const audioEnablerContainer = document.getElementById('audioEnablerContainer');
+        let soundscapeController = null; // Will hold reference to control the soundscape
+        
+        audioEnabler.addEventListener('click', function() {
+            // Visual effect on click
+            const rect = this.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            // Create explosion effect
+            particleSystem.createExplosion(centerX, centerY, 100, {
+                minSpeed: 1,
+                maxSpeed: 8,
+                minSize: 2,
+                maxSize: 6,
+                colors: ['#0ff', '#0af', '#08f', '#f0f', '#fff'],
+                minLifetime: 1,
+                maxLifetime: 3
+            });
+            
+            // Initialize audio system immediately to ensure soundscape can play
+            if (window.audioManager) {
+                try {
+                    // Resume audio context to allow playback
+                    window.audioManager.context.resume();
+                    
+                    // Start the protocol soundscape (runs for the full 2 seconds)
+                    soundscapeController = window.audioManager.playMaterializationProtocolSoundscape(2000);
+                    console.log("Protocol soundscape started");
+                } catch (e) {
+                    console.warn("Error initializing audio:", e);
+                }
+            } else {
+                console.warn("Audio manager not available yet");
+            }
+            
+            // Update status text
+            const statusText = this.querySelector('.status-text');
+            statusText.textContent = '// PROTOCOL INITIATED //';
+            statusText.style.color = '#ff0';
+            
+            // Add pulsing effect to button
+            this.style.animation = 'pulse 0.5s infinite alternate';
+            this.style.boxShadow = '0 0 40px #0ff, 0 0 60px #08f';
+            
+            // Create periodic particle bursts during the countdown
+            let burstCount = 0;
+            const maxBursts = 5;
+            const burstInterval = setInterval(() => {
+                if (burstCount >= maxBursts) {
+                    clearInterval(burstInterval);
+                    return;
+                }
+                
+                // Calculate a position that moves toward the center of the screen
+                const screenCenterX = window.innerWidth / 2;
+                const screenCenterY = window.innerHeight / 2;
+                
+                // Interpolate position (starts at button, gradually moves toward screen center)
+                const progress = burstCount / maxBursts;
+                const burstX = centerX + (screenCenterX - centerX) * progress;
+                const burstY = centerY + (screenCenterY - centerY) * progress;
+                
+                // Create particle burst
+                particleSystem.createExplosion(burstX, burstY, 30, {
+                    minSpeed: 2,
+                    maxSpeed: 5,
+                    minSize: 2,
+                    maxSize: 4,
+                    colors: ['#0ff', '#08f', '#f0f', '#fff'],
+                    minLifetime: 0.5,
+                    maxLifetime: 1.5
+                });
+                
+                burstCount++;
+            }, 350); // Create a burst every 350ms
+            
+            // Hide the container after an effect delay
+            setTimeout(() => {
+                // Final massive burst at screen center before revealing the game
+                particleSystem.createExplosion(
+                    window.innerWidth / 2, 
+                    window.innerHeight / 2, 
+                    200, {
+                        minSpeed: 1,
+                        maxSpeed: 10,
+                        minSize: 2,
+                        maxSize: 7,
+                        colors: ['#fff', '#0ff', '#08f', '#f0f', '#ff0'],
+                        minLifetime: 1,
+                        maxLifetime: 3
+                    }
+                );
+                
+                audioEnablerContainer.classList.add('hidden');
+                
+                // Initialize audio system
+                if (window.audioManager) {
+                    try {
+                        console.log("Initializing audio from materialization protocol");
+                        
+                        // Resume audio context
+                        if (window.audioManager.context) {
+                            window.audioManager.context.resume().then(() => {
+                                console.log("Audio context resumed from materialization protocol");
+                                
+                                // Play startup sound followed by materialization thud
+                                window.audioManager.playStartupSound();
+                                
+                                setTimeout(() => {
+                                    window.audioManager.playMaterializationThudSound();
+                                }, 500);
+                            });
+                        }
+                    } catch (e) {
+                        console.warn("Error initializing audio:", e);
+                    }
+                } else {
+                    console.warn("Audio manager not available yet");
+                    // Add listener for when audio manager becomes available
+                    const checkAudio = setInterval(() => {
+                        if (window.audioManager) {
+                            clearInterval(checkAudio);
+                            try {
+                                window.audioManager.context.resume().then(() => {
+                                    window.audioManager.playStartupSound();
+                                    setTimeout(() => {
+                                        window.audioManager.playMaterializationThudSound();
+                                    }, 500);
+                                });
+                            } catch (e) {
+                                console.warn("Error in delayed audio init:", e);
+                            }
+                        }
+                    }, 100);
+                }
+                
+                // Show notification about game controls
+                window.showNotification('Materialization complete. WASD to move, click to shoot.');
+            }, 2000);
+        });
+        
         // Show initial notification
         const notification = document.getElementById('notification');
         notification.classList.add('active');
