@@ -54,6 +54,7 @@ export default class Game {
         // Initialize the player with effects manager
         this.player = new Player(width / 2, height / 2 - 20);
         this.player.effects = this.effects; // Pass effects manager to player
+        this.player.visible = false; // Initially set player to invisible until materialization completes
         
         // Set up renderer properties for projectiles
         this.player.canvasWidth = width;
@@ -203,6 +204,41 @@ export default class Game {
         if (!this.running) {
             this.running = true;
             this.lastTimestamp = performance.now();
+            
+            // Check if materialization protocol has been engaged
+            const isAudioEnabled = () => {
+                return !document.getElementById('audioEnablerContainer') || 
+                      document.getElementById('audioEnablerContainer').classList.contains('hidden');
+            };
+            
+            // Only create materialization effect if audio has been enabled
+            if (isAudioEnabled()) {
+                console.log("Materialization protocol already completed, playing startup effects");
+                
+                // Force AudioManager initialization by playing startup sound
+                if (window.audioManager) {
+                    window.audioManager.playStartupSound();
+                }
+                
+                // Create player materialization effect
+                this.createPlayerMaterializationEffect();
+            } else {
+                console.log("Waiting for materialization protocol to engage...");
+                
+                // Wait for the materialization protocol to be engaged before proceeding with effects
+                const checkMaterialization = setInterval(() => {
+                    if (isAudioEnabled()) {
+                        clearInterval(checkMaterialization);
+                        console.log("Materialization protocol engaged, creating player effect");
+                        
+                        // Create the effect after a short delay to let audio initialize
+                        setTimeout(() => {
+                            this.createPlayerMaterializationEffect();
+                        }, 200);
+                    }
+                }, 100);
+            }
+            
             // Start the game loop
             requestAnimationFrame(this.gameLoop);
         }
@@ -1765,6 +1801,7 @@ export default class Game {
         // Create the player in the center of the screen
         this.player = new Player(this.width / 2, this.height / 2);
         this.player.effects = this.effects;
+        this.player.visible = false; // Initially set player to invisible until materialization completes
         
         // Important: pass 'this' to StartingRoom constructor instead of dimensions
         this.currentRoom = new StartingRoom(this);
@@ -1778,7 +1815,7 @@ export default class Game {
         this.menuOpen = false;
         
         // Create player reconstitution effect before camera animation
-        this.createPlayerReconstitutionEffect();
+        this.createPlayerMaterializationEffect();
         
         // Fade in music
         if (window.audioManager) {
@@ -1788,7 +1825,7 @@ export default class Game {
         // Enhanced camera animation sequence for restart
         // Start with zoom out and shake
         this.camera.shake(25, 400); // Increased intensity and duration
-        this.camera.zoomTo(0.7, 300);
+        this.camera.zoomTo(0.7, 300); // Zoom out
         
         // After initial shake, do a smooth zoom transition sequence
         setTimeout(() => {
@@ -2142,62 +2179,219 @@ export default class Game {
     
     /**
      * Creates a dramatic particle effect when the player is reconstituted
+     * @deprecated Use createPlayerMaterializationEffect instead
      */
     createPlayerReconstitutionEffect() {
-        if (!this.effects || !this.player) return;
+        // For backwards compatibility, just call the newer method
+        this.createPlayerMaterializationEffect();
+    }
+    
+    /**
+     * Creates a materialization effect for the player at game startup
+     * This adds visual flair and helps initialize audio system immediately
+     */
+    createPlayerMaterializationEffect() {
+        if (!this.player) return;
         
-        const playerX = this.player.x;
-        const playerY = this.player.y;
+        console.log('Creating player materialization effect');
         
-        // Inner burst - fast expanding bright particles
-        this.effects.particleSystem.createParticleBurst(playerX, playerY, 40, {
-            color: ['#ffffff', '#00ffff', '#88ffff', '#ff00ff'],
-            minSpeed: 40,
-            maxSpeed: 120,
-            minSize: 3,
-            maxSize: 6,
-            minLifetime: 0.4, 
-            maxLifetime: 0.8
-        });
-        
-        // Outer burst - slower expanding particles
-        this.effects.particleSystem.createParticleBurst(playerX, playerY, 30, {
-            color: ['#00ffcc', '#ff00aa', '#ffff00', '#00ccff'],
-            minSpeed: 20,
-            maxSpeed: 60,
-            minSize: 4,
-            maxSize: 8,
-            minLifetime: 0.8,
-            maxLifetime: 1.2
-        });
-        
-        // Create a series of expanding rings
-        for (let i = 0; i < 3; i++) {
-            setTimeout(() => {
-                this.effects.createScreenFlash('#00ffff', 0.2, 0.15);
-                
-                // Create circular wave of particles
-                const segments = 16;
-                const radius = 10 + (i * 15);
-                
-                for (let j = 0; j < segments; j++) {
-                    const angle = (j / segments) * Math.PI * 2;
-                    const x = playerX + Math.cos(angle) * radius;
-                    const y = playerY + Math.sin(angle) * radius;
+        // Force audio context to resume immediately
+        if (window.audioManager) {
+            // Try resuming and playing a silent sound to unlock audio
+            try {
+                const context = window.audioManager.context;
+                if (context) {
+                    console.log('Audio context state:', context.state);
+                    context.resume().then(() => console.log('Audio context resumed successfully'));
                     
-                    this.effects.particleSystem.createParticle(
-                        x, y, 
-                        Math.cos(angle) * 30,
-                        Math.sin(angle) * 30,
-                        4,
-                        i === 0 ? '#ffffff' : (i === 1 ? '#00ffff' : '#ff00ff'),
-                        0.5
-                    );
+                    // Create a silent oscillator to unlock audio on Safari/iOS
+                    const silentOsc = context.createOscillator();
+                    const silentGain = context.createGain();
+                    silentGain.gain.value = 0.001;
+                    silentOsc.connect(silentGain);
+                    silentGain.connect(context.destination);
+                    silentOsc.start();
+                    silentOsc.stop(context.currentTime + 0.1);
                 }
-            }, i * 100);
+            } catch (e) {
+                console.warn('Error trying to unlock audio:', e);
+            }
         }
         
-        // Create a central glow effect
-        this.effects.createGlowEffect(playerX, playerY, 20, '#ffffff', 0.6);
+        // Player's current position
+        const centerX = this.player.x;
+        const centerY = this.player.y;
+        
+        // Ensure player is initially invisible
+        this.player.visible = false;
+        
+        // Initial camera effect to indicate something is about to happen
+        if (this.camera) {
+            this.camera.zoomTo(0.9, 300); // Slight zoom out in anticipation
+        }
+        
+        // Create pre-materialization particle effect
+        if (this.effects) {
+            // Small energy gathering particles
+            this.effects.createParticleBurst(
+                centerX, 
+                centerY,
+                15, // Number of particles
+                {
+                    color: ['#00ffff', '#33ffff', '#66ffff', '#ffffff'], // Cyan to white
+                    minSpeed: 20,
+                    maxSpeed: 50,
+                    minLifetime: 0.5,
+                    maxLifetime: 1.0,
+                    minSize: 1,
+                    maxSize: 3,
+                    gravity: -50 // Particles float upward slightly
+                }
+            );
+        }
+        
+        // First phase - energy gathering (sound only)
+        if (window.audioManager) {
+            console.log('Initiating materialization sound sequence - phase 1');
+            // Play a subtle charging sound if available
+            try {
+                const context = window.audioManager.context;
+                if (context) {
+                    // Create a rising tone
+                    const osc = context.createOscillator();
+                    const gain = context.createGain();
+                    
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(100, context.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(400, context.currentTime + 0.9);
+                    
+                    gain.gain.setValueAtTime(0, context.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.15, context.currentTime + 0.3);
+                    gain.gain.linearRampToValueAtTime(0.05, context.currentTime + 0.9);
+                    
+                    osc.connect(gain);
+                    gain.connect(window.audioManager.masterGain);
+                    
+                    osc.start();
+                    osc.stop(context.currentTime + 0.9);
+                }
+            } catch (e) {
+                console.warn('Error creating pre-materialization sound:', e);
+            }
+        }
+        
+        // Second phase - materialization flash (after delay)
+        setTimeout(() => {
+            // Create main materialization flash effect
+            if (this.effects) {
+                this.effects.createParticleBurst(
+                    centerX, 
+                    centerY,
+                    25, // More particles for the main effect
+                    {
+                        color: ['#ffffff', '#ccffff', '#99ffff', '#66ffff'], // White to cyan
+                        minSpeed: 100,
+                        maxSpeed: 250,
+                        minLifetime: 0.3,
+                        maxLifetime: 0.8,
+                        minSize: 2,
+                        maxSize: 6
+                    }
+                );
+            }
+            
+            // Camera zoom effect for the flash
+            if (this.camera) {
+                this.camera.zoomTo(1.1, 200); // Quick zoom in for impact
+            }
+            
+            // Make player visible with flash
+            this.player.visible = true;
+            
+            // Play the materialization thud sound for impact
+            if (window.audioManager) {
+                console.log('Materialization sound sequence - phase 2 (thud)');
+                window.audioManager.playMaterializationThudSound();
+            }
+            
+            // Third phase - final impact boom (after short delay)
+            setTimeout(() => {
+                console.log('Materialization sound sequence - phase 3 (boom)');
+                
+                // Camera shake for materialization impact
+                if (this.camera) {
+                    this.camera.shake(12, 400);
+                }
+                
+                // Create a direct boom sound
+                if (window.audioManager) {
+                    try {
+                        const context = window.audioManager.context;
+                        if (context) {
+                            // Create a powerful low frequency sound
+                            const osc = context.createOscillator();
+                            const gain = context.createGain();
+                            
+                            osc.type = 'sine';
+                            osc.frequency.value = 35; // Very low frequency
+                            
+                            gain.gain.setValueAtTime(0, context.currentTime);
+                            gain.gain.linearRampToValueAtTime(0.9, context.currentTime + 0.02);
+                            gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 1.2);
+                            
+                            osc.connect(gain);
+                            gain.connect(window.audioManager.masterGain);
+                            
+                            osc.start();
+                            osc.stop(context.currentTime + 1.2);
+                            
+                            // Clean up
+                            setTimeout(() => {
+                                try {
+                                    osc.disconnect();
+                                    gain.disconnect();
+                                } catch (e) {
+                                    console.warn('Error cleaning up boom sound:', e);
+                                }
+                            }, 1500);
+                        }
+                    } catch (e) {
+                        console.warn('Error creating boom sound:', e);
+                    }
+                }
+                
+                // Fourth phase - settling effect
+                setTimeout(() => {
+                    // Final camera adjustment to normal
+                    if (this.camera) {
+                        this.camera.zoomTo(1.0, 350); // Settle to normal zoom
+                    }
+                    
+                    // Ensure player is fully visible
+                    this.player.visible = true;
+                    
+                    // Small particle effect for "dust settling"
+                    if (this.effects) {
+                        this.effects.createParticleBurst(
+                            centerX, 
+                            centerY,
+                            10, // Just a few particles
+                            {
+                                color: ['#33ffff', '#66ffff'], // Cyan variants
+                                minSpeed: 20,
+                                maxSpeed: 60,
+                                minLifetime: 0.5,
+                                maxLifetime: 1.2,
+                                minSize: 1,
+                                maxSize: 3,
+                                gravity: 20 // Light downward effect
+                            }
+                        );
+                    }
+                }, 400);
+                
+            }, 200); // Delay between visibility and boom
+            
+        }, 800); // Initial delay before materialization
     }
 }

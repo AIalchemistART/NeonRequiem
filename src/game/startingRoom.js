@@ -55,7 +55,7 @@ export class StartingRoom {
                 {
                     destinationUrl: this.getRefUrl(),
                     label: 'RETURN PORTAL',
-                    showInteractionHint: false // Disable the "Press ENTER" hint text
+                    showInteractionHint: true // Enable the "Press ENTER" hint text
                 }
             );
         }
@@ -79,6 +79,17 @@ export class StartingRoom {
                 destinationUrl: 'https://jam.pieter.com',
                 label: 'VIBE JAM 2025'
                 // showInteractionHint is true by default
+            }
+        );
+        
+        // Create AI Alchemist's Lair portal at the center top
+        this.alchemistPortal = createVibePortal('alchemist',
+            this.width / 2, // Center of room width
+            this.wallThickness + 80, // Top of room, moved down 80 units
+            {
+                destinationUrl: 'https://aialchemistart.github.io/AIalchemistsLAIR/',
+                label: 'AI ALCHEMIST\'S LAIR',
+                portalColor: '#8800ff' // Purple portal color
             }
         );
         
@@ -136,6 +147,14 @@ export class StartingRoom {
             // Check if player is near the portal
             this.vibeJamPortal.checkCollision(player);
             // Portal activation moved to handleKeyDown
+        }
+        
+        // Update AI Alchemist's Lair portal
+        if (this.alchemistPortal) {
+            this.alchemistPortal.update(deltaTime);
+            
+            // Check if player is near the portal
+            this.alchemistPortal.checkCollision(player);
         }
         
         // Create subtle ambient particles if effects are available
@@ -688,6 +707,10 @@ export class StartingRoom {
         if (this.vibeJamPortal) {
             this.vibeJamPortal.render(ctx);
         }
+        
+        if (this.alchemistPortal) {
+            this.alchemistPortal.render(ctx);
+        }
     }
     
     /**
@@ -829,24 +852,8 @@ export class StartingRoom {
         if (event.key === 'Enter') {
             // Check if player is near the entry portal and activate it
             if (this.vibePortal && this.vibePortal.interactable) {
-                console.log('Return portal is only decorative - cannot be used as entry point');
-                
-                // Visual feedback that portal is inactive (particle burst)
-                if (this.effects) {
-                    this.effects.createParticleBurst(
-                        this.vibePortal.x, 
-                        this.vibePortal.y,
-                        20, // More particles for visible feedback
-                        {
-                            color: ['#ff0000', '#ff3333', '#ff6666'], // Red color variants
-                            minSpeed: 50,
-                            maxSpeed: 150,
-                            minLifetime: 0.5,
-                            maxLifetime: 1.2
-                        }
-                    );
-                }
-                
+                console.log('Activating return portal to: ' + this.vibePortal.destinationUrl);
+                this.vibePortal.activate();
                 return;
             }
             
@@ -861,6 +868,13 @@ export class StartingRoom {
             if (this.vibeJamPortal && this.vibeJamPortal.interactable) {
                 console.log('Activating Vibe Jam 2025 portal');
                 this.vibeJamPortal.activate();
+                return;
+            }
+            
+            // Check if player is near the AI Alchemist's Lair portal and activate it
+            if (this.alchemistPortal && this.alchemistPortal.interactable) {
+                console.log('Activating AI Alchemist\'s Lair portal');
+                this.alchemistPortal.activate();
                 return;
             }
         }

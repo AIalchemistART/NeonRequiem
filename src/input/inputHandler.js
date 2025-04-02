@@ -191,6 +191,27 @@ export default class InputHandler {
                 const gameCanvas = document.getElementById('gameCanvas');
                 this.mousePosition.x = gameCanvas.width / 2;
                 this.mousePosition.y = gameCanvas.height / 2;
+                
+                // Unlock audio context on pointer lock - this is critical as browsers require user interaction
+                if (window.audioManager) {
+                    try {
+                        console.log("Unlocking audio from pointer lock event");
+                        // Resume audio context
+                        if (window.audioManager.context && window.audioManager.context.state !== 'running') {
+                            window.audioManager.context.resume().then(() => {
+                                console.log("Audio context resumed from pointer lock event");
+                                // Play the startup sound to ensure audio is working
+                                window.audioManager.playStartupSound();
+                                // Also play the materialization thud sound
+                                setTimeout(() => {
+                                    window.audioManager.playMaterializationThudSound();
+                                }, 500);
+                            });
+                        }
+                    } catch (e) {
+                        console.warn("Error unlocking audio:", e);
+                    }
+                }
             }
         });
         

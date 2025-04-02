@@ -19,6 +19,11 @@ export class VibePortal {
         this.showInteractionHint = options.showInteractionHint !== undefined ? options.showInteractionHint : true;
         this.interactionHint = 'Press ENTER to use portal';
         
+        // Fade-out effect properties
+        this.fading = false;
+        this.fadeStartTime = 0;
+        this.fadeDuration = 1000; // 1 second fade-out
+        
         // Create initial particles
         this.initParticles();
     }
@@ -93,7 +98,35 @@ export class VibePortal {
      * Portal activation - navigates to destination URL
      */
     activate() {
-        if (!this.active) return;
+        if (!this.active || this.fading) return;
+        
+        // Start fade-out effect
+        this.fading = true;
+        this.fadeStartTime = Date.now();
+        
+        // Play portal whoosh sound if audio manager is available
+        if (window.audioManager) {
+            window.audioManager.playPortalSound(this.color);
+        }
+        
+        // Create a full-screen overlay div for the fade effect
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = this.color;
+        overlay.style.opacity = '0';
+        overlay.style.transition = `opacity ${this.fadeDuration}ms ease-in`;
+        overlay.style.zIndex = '10000';
+        overlay.style.pointerEvents = 'none';
+        document.body.appendChild(overlay);
+        
+        // Trigger fade after a small delay to ensure the div is rendered
+        setTimeout(() => {
+            overlay.style.opacity = '1';
+        }, 10);
         
         // Get current URL parameters
         const currentParams = new URLSearchParams(window.location.search);
@@ -120,8 +153,10 @@ export class VibePortal {
         const paramString = newParams.toString();
         const destinationUrl = this.destinationUrl + (paramString ? '?' + paramString : '');
         
-        // Navigate to the destination
-        window.location.href = destinationUrl;
+        // Navigate to the destination after fade completes
+        setTimeout(() => {
+            window.location.href = destinationUrl;
+        }, this.fadeDuration);
     }
     
     /**

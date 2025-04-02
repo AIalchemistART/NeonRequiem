@@ -78,6 +78,9 @@ export default class Player {
         // Effects
         this.effects = null; // Will be set by the game
         this.lastObstacleCollision = null; // For tracking obstacle collisions
+        
+        // Visibility control (for materialization effects)
+        this.visible = true; // Whether the player should be rendered
     }
     
     /**
@@ -680,6 +683,8 @@ export default class Player {
             
             return;
         }
+        
+        if (!this.visible) return; // Skip rendering if not visible
         
         const dashAvailable = this.dashCooldownTimer <= 0;
         
