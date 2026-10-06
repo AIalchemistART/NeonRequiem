@@ -2,8 +2,8 @@
 
 **A procedurally generated roguelike dungeon crawler with cyberpunk aesthetics and synthesized audio.**
 
-[![Live Game](https://img.shields.io/badge/Play-Live%20Demo-00ffff?style=for-the-badge)](https://neon-requiem.netlify.app)
-[![Platform](https://img.shields.io/badge/Platform-Web-ff0066?style=for-the-badge)](https://neon-requiem.netlify.app)
+[![Live Game](https://img.shields.io/badge/Play-Live%20Demo-00ffff?style=for-the-badge)](https://aialchemistart.github.io/NeonRequiem/)
+[![Platform](https://img.shields.io/badge/Platform-Web-ff0066?style=for-the-badge)](https://aialchemistart.github.io/NeonRequiem/)
 
 ---
 
@@ -39,7 +39,7 @@
 
 ### Play Online
 
-Visit **[neon-requiem.netlify.app](https://neon-requiem.netlify.app)** to play instantly in your browser.
+Visit **[aialchemistart.github.io/NeonRequiem](https://aialchemistart.github.io/NeonRequiem/)** to play instantly in your browser.
 
 ### Local Development
 
@@ -62,7 +62,12 @@ Visit `http://localhost:8000` in your browser. Audio starts after the on-screen 
 ```
 NeonRequiem/
 ├── index.html                      # Page, styles, analytics, and audio prompt
+├── LICENSE                         # MIT license for the game code
+├── CREDITS.md                      # Code and music credits
 ├── _headers                        # Netlify cache headers
+├── assets/
+│   ├── audio/                      # Original background music (see CREDITS.md)
+│   └── icons/                      # Favicon
 ├── src/
 │   ├── main.js                     # Game initialization
 │   ├── game/
@@ -85,7 +90,6 @@ NeonRequiem/
 │   │   └── audioManager.js         # Synthesized sound effects
 │   └── ui/
 │       └── pauseMenu.js            # Pause screen UI
-└── assets/icons/                   # Favicon
 ```
 
 ## 🎮 Controls
@@ -128,7 +132,7 @@ Click the canvas to capture the pointer. Pause-menu options are Resume and Quit.
 ### Audio System
 - Effects are synthesized with the Web Audio API (no spatial panner, no footstep samples)
 - Covers shooting, dash, door transitions, item pickups, and death
-- `playBackground()` looks for `.ogg` files under `assets/audio/`; that folder is not in the repository
+- `playBackground()` plays the original `.ogg` tracks in `assets/audio/` (see [CREDITS.md](CREDITS.md))
 
 ## 🎨 Visual Style
 
@@ -139,11 +143,7 @@ Click the canvas to capture the pointer. Pause-menu options are Resume and Quit.
 
 ## 🌐 Deployment
 
-The live site is hosted on **Netlify**. There is no build step. `_headers` only sets a no-cache policy:
-
-```
-Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0
-```
+The live site is [GitHub Pages](https://aialchemistart.github.io/NeonRequiem/) from the `main` branch. There is no build step. `_headers` is a Netlify cache-header file and is not applied by GitHub Pages.
 
 ## 📊 Analytics
 
@@ -165,16 +165,19 @@ Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0
 
 ## 📝 License
 
-MIT License — Free to use, modify, and distribute. This repository does not include a separate `LICENSE` file.
+The game code is under the [MIT License](LICENSE). Copyright 2025–2026 Matthew Walker (AI Alchemist).
+
+The music in `assets/audio/` is separate. See [CREDITS.md](CREDITS.md).
 
 ## 🙏 Credits
 
 Built with vanilla JavaScript as a showcase of procedural generation and game development fundamentals.
 
-**Developer:** AI Alchemist  
+**Developer:** Matthew Walker (AI Alchemist)  
 **Engine:** Custom HTML5 Canvas Renderer  
-**Audio:** Web Audio API
+**Music:** Original tracks by Vanitas (Matthew Walker). See [CREDITS.md](CREDITS.md).  
+**Sound effects:** Web Audio API
 
 ---
 
-🎮 **[Play Now](https://neon-requiem.netlify.app)** | 💬 Report bugs via GitHub Issues
+🎮 **[Play Now](https://aialchemistart.github.io/NeonRequiem/)** | 💬 Report bugs via GitHub Issues
